@@ -57,7 +57,7 @@
     <div class="row mt-4 justify-content-center text-center">
     <div class="col-auto">
         <button type="button" class="btn btn-success custom-button" id="addModalBawaBarang">
-            <i class="fa fa-plus-square"></i>&nbsp;Bawa Barang Titipan
+            <i class="fa fa-plus-square"></i>&nbsp;Bawa Barang
         </button>
     </div>
     <div class="col-auto">
@@ -82,9 +82,9 @@
                                         <thead class="text-center">
                                             <tr>
                                                 <th width="5%">#</th>
-                                                <th width="10%">DN Number</th>
+                                                <th width="10%">DN Number / SJ Number</th>
                                                 <th width="25%">No Pol</th>
-                                                <th width="10%">Driver</th>
+                                                <th width="10%">Status</th>
                                                 <th width="10%">Vendor name</th>
                                                 <th width="10%">Vendor ID</th>
                                                 <th width="10%">Date</th>
@@ -104,13 +104,237 @@
     </div>
 </div>
 
-@include('psx_security.milkrun.modal.bawa_barang_titipan')
+@include('psx_security.milkrun.modal.bawa_barang')
 @include('psx_security.milkrun.modal.kosong')
 @include('psx_security.milkrun.modal.supplier_pop_up')
 
 <script src="{{ asset('Datatables/jquery.dataTables.min.js') }}"></script>
 <script src="{{ asset('Datatables/dataTables.bootstrap4.min.js') }}"></script>
 <script>
+
+//barang
+
+
+$(document).ready(function () {
+    function loadMilkrunData() {
+        $.get("{{ route('milkrun.data') }}", function (data) {
+            let html = '';
+            data.forEach((entry, index) => {
+                html += `
+                    <tr>
+                        <td class="text-center">${index + 1}</td>
+                        <td class="text-center">${entry.dnjs_number}</td>
+                        <td>${entry.no_pol}</td>
+                        <td>${entry.status}</td>
+                        <td>${entry.vendor_name}</td>
+                        <td>${entry.vendor_id}</td>
+                        <td>${entry.date}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-danger" data-id="${entry.id}">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            $('#body_item').html(html);
+        }).fail(() => {
+            $('#body_item').html('<tr><td colspan="8" class="text-center text-danger">Failed to load data</td></tr>');
+        });
+    }
+
+    loadMilkrunData();
+});
+let barangData = [];
+
+$(document).ready(function () {
+    $('#addModalBawaBarang').on('click', function () {
+        $('#modalBawaBarang').modal('show');
+    });
+
+    // Vendor selection
+    $('#vendor_name_barang').on('click', function () {
+        $('#modal_supplier_list').data('targetField', 'vendor_name_barang').modal('show');
+
+        if (!$('#supplierTableBody').hasClass('loaded')) {
+            $('#supplierTableBody').html('<tr><td colspan="3" class="text-center">Loading supplier data...</td></tr>');
+
+            $.get('{{ route("get.suppliers") }}', function (data) {
+                if (Array.isArray(data)) {
+                    const rows = data.map(supplier => `
+                        <tr class="supplier-row">
+                            <td>${supplier.vendor}</td>
+                            <td>${supplier.supplier_name}</td>
+                            <td>${supplier.street}</td>
+                        </tr>
+                    `).join('');
+                    $('#supplierTableBody').html(rows).addClass('loaded');
+                } else {
+                    $('#supplierTableBody').html('<tr><td colspan="3" class="text-danger text-center">Invalid supplier data</td></tr>');
+                }
+            }).fail(() => {
+                $('#supplierTableBody').html('<tr><td colspan="3" class="text-danger text-center">Failed to load suppliers</td></tr>');
+            });
+        }
+    });
+
+    $(document).on('dblclick', '.supplier-row', function () {
+        const vendorId = $(this).find('td:eq(0)').text().trim();
+        const vendorName = $(this).find('td:eq(1)').text().trim();
+
+        $('#vendor_id_barang').val(vendorId);
+        $('#vendor_name_barang').val(vendorName);
+        $('#modal_supplier_list').modal('hide');
+    });
+
+    $('#addBarangRow').on('click', function () {
+        const no_pol = $('#no_pol_barang').val();
+        const driver = $('#driver_barang').val();
+        const vendor_name = $('#vendor_name_barang').val();
+        const vendor_id = $('#vendor_id_barang').val();
+        const date = $('#barang_datetime_barang').val();
+        const initialSJ = $('#dn_number_barang').val().trim(); // optional pre-fill
+
+        if (!no_pol || !driver || !vendor_name || !vendor_id || !date) {
+            return swal.fire({
+                icon: 'warning',
+                title: 'Missing fields',
+                text: 'Please fill all top input fields.'
+            });
+        }
+
+        const rowData = {
+            no_pol,
+            driver,
+            vendor_name,
+            vendor_id,
+            date,
+            dnsj_number: initialSJ || '',
+            date_sj: '',
+            status: 'BAWA_BARANG'
+        };
+
+        barangData.push(rowData);
+        const rowIndex = barangData.length - 1;
+
+        const rowHTML = `
+            <tr data-index="${rowIndex}">
+                <td>${vendor_name}</td>
+                <td>${vendor_id}</td>
+                <td>${date}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm no-sj bg-warning" placeholder="Enter No SJ" value="${initialSJ}" />
+                </td>
+                <td>
+                    <input type="date" class="form-control form-control-sm date-sj bg-warning" />
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-sm remove-row"><i class="fa fa-trash"></i></button>
+                </td>
+            </tr>
+        `;
+
+        $('#barangItem').append(rowHTML);
+        $('#dn_number_barang').val(''); // Clear after adding
+    });
+
+    $(document).on('click', '.remove-row', function () {
+        const row = $(this).closest('tr');
+        const index = row.data('index');
+        barangData.splice(index, 1);
+        row.remove();
+
+        $('#barangItem tr').each(function (i) {
+            $(this).attr('data-index', i);
+        });
+    });
+
+    $('#saveBarang').on('click', function () {
+        if (barangData.length === 0) {
+            return swal.fire({
+                icon: 'warning',
+                title: 'No data',
+                text: 'Add at least one row before saving.'
+            });
+        }
+
+        let isValid = true;
+
+        $('#barangItem tr').each(function () {
+            const $row = $(this);
+            const index = $row.data('index');
+
+            const dnsj_number = $row.find('.no-sj').val()?.trim();
+            const date_sj = $row.find('.date-sj').val()?.trim();
+
+            if (!dnsj_number || !date_sj) {
+                isValid = false;
+                return false; // break
+            }
+
+            if (barangData[index]) {
+                barangData[index].dnsj_number = dnsj_number;
+                barangData[index].date_sj = date_sj;
+            }
+        });
+
+        if (!isValid) {
+            return swal.fire({
+                icon: 'warning',
+                title: 'Missing SJ Data',
+                text: 'Please complete No SJ and Date SJ in the table.'
+            });
+        }
+
+        swal.fire({
+            icon: 'question',
+            title: 'Confirm Save',
+            text: 'Are you sure you want to save all entries?',
+            showCancelButton: true,
+            confirmButtonText: 'Save',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.value) {
+                $.ajax({
+                    url: '{{ route("barang.save") }}',
+                    type: 'POST',
+                    data: { data: barangData },
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function (res) {
+                        swal.fire({
+                            icon: 'success',
+                            title: 'Saved!',
+                            text: 'All data has been saved.'
+                        });
+                        barangData = [];
+                        $('#barangItem').empty();
+                        $('#modalBarang').modal('hide');
+
+                        loadMilkrunData();
+                    },
+                    error: function (xhr) {
+                        swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to save data.'
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    // Reset barang modal when closed
+    $('#modalBawaBarang').on('hidden.bs.modal', function () {
+        barangData = [];
+        $('#barangItem').empty();
+        $('#no_pol_barang, #driver_barang, #vendor_name_barang, #vendor_id_barang, #barang_datetime_barang, #dn_number_barang').val('');
+    });
+
+});
+
+
+//Kosong
 let kosongData = [];
 
 $(document).ready(function () {
@@ -154,12 +378,12 @@ $(document).ready(function () {
         $('#modal_supplier_list').modal('hide');
     });
 
-    $('#addKosongRow').on('click', function () {
+    $('#addBarangRow').on('click', function () {
         const no_pol = $('#no_pol_kosong').val();
         const driver = $('#driver_kosong').val();
         const vendor_name = $('#vendor_name_kosong').val();
         const vendor_id = $('#vendor_id_kosong').val();
-        const date = $('#barang_datetime_kosong').val();
+        const date = $('#barang_datetime').val();
 
         if (!no_pol || !driver || !vendor_name || !vendor_id || !date) {
             return swal.fire({
@@ -175,8 +399,6 @@ $(document).ready(function () {
             vendor_name,
             vendor_id,
             date,
-            no_sj: '',
-            date_sj: '',
             status: 'KOSONG'
         };
 
@@ -186,22 +408,18 @@ $(document).ready(function () {
 
         const rowHTML = `
             <tr data-index="${rowIndex}">
+                <td>${no_pol}</td>
+                <td>${driver}</td>
                 <td>${vendor_name}</td>
                 <td>${vendor_id}</td>
                 <td>${date}</td>
-                <td>
-                    <input type="text" class="form-control form-control-sm no-sj bg-warning" placeholder="Enter No SJ" />
-                </td>
-                <td>
-                    <input type="date" class="form-control form-control-sm date-sj bg-warning" />
-                </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-danger btn-sm remove-row"><i class="fa fa-trash"></i></button>
                 </td>
             </tr>
         `;
 
-        $('#kosongItem').append(rowHTML);
+        $('#tableDN tbody').append(rowHTML);
     });
 
     $(document).on('click', '.remove-row', function () {
@@ -211,96 +429,74 @@ $(document).ready(function () {
         row.remove();
 
         // Reindex
-        $('#kosongItem tr').each(function (i) {
+        $('#tableDN tbody tr').each(function (i) {
             $(this).attr('data-index', i);
         });
     });
 
-    $('#saveKosong').on('click', function (e) {
-
-    // Validation check (no data at all)
-    if (kosongData.length === 0) {
-        return swal.fire({
-            icon: 'warning',
-            title: 'No data',
-            text: 'Add at least one row before saving.'
-        });
-    }
-
-    let isValid = true;
-
-    // Loop over table rows and assign SJ data
-    $('#kosongItem tr').each(function () {
-        const $row = $(this);
-        const index = $row.data('index');
-
-        const no_sj = $row.find('.no-sj').val()?.trim();
-        const date_sj = $row.find('.date-sj').val()?.trim();
-
-
-        if (!no_sj || !date_sj) {
-            isValid = false;
-            return false; // Break loop
-        }
-
-        if (kosongData[index]) {
-            kosongData[index].no_sj = no_sj;
-            kosongData[index].date_sj = date_sj;
-        }
-    });
-
-    if (!isValid) {
-        return swal.fire({
-            icon: 'warning',
-            title: 'Missing SJ Data',
-            text: 'Please complete No SJ and Date SJ in the table.'
-        });
-    }
-
-    // Confirm using SweetAlert 7
-    swal.fire({
-        icon: 'question',
-        title: 'Confirm Save',
-        text: 'Are you sure you want to save all entries?',
-        showCancelButton: true,
-        confirmButtonText: 'Save',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-
-        if (result.value) {
-            $.ajax({
-                url: '{{ route("kosong.save") }}',
-                type: 'POST',
-                data: { data: kosongData },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function (res) {
-                    swal.fire({
-                        icon: 'success',
-                        title: 'Saved!',
-                        text: 'All data has been saved.'
-                    });
-                    kosongData = [];
-                    $('#kosongItem').empty();
-                    $('#modalKosong').modal('hide');
-                },
-                error: function (xhr) {
-                    swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to save data.'
-                    });
-                }
+    $('#saveKosong').on('click', function () {
+        if (kosongData.length === 0) {
+            return swal.fire({
+                icon: 'warning',
+                title: 'No data',
+                text: 'Add at least one row before saving.'
             });
         }
+
+        swal.fire({
+            icon: 'question',
+            title: 'Confirm Save',
+            text: 'Are you sure you want to save all entries?',
+            showCancelButton: true,
+            confirmButtonText: 'Save',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.value) {
+                $.ajax({
+                    url: '{{ route("kosong.save") }}',
+                    type: 'POST',
+                    data: { data: kosongData },
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function (res) {
+                        swal.fire({
+                            icon: 'success',
+                            title: 'Saved!',
+                            text: 'All data has been saved.'
+                        });
+                        kosongData = [];
+                        $('#tableDN tbody').empty();
+                        $('#modalKosong').modal('hide');
+
+                        loadMilkrunData();
+                    },
+                    error: function (xhr) {
+                        swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to save data.'
+                        });
+                    }
+                });
+            }
+        });
     });
-});
+
+    // Reset kosong modal when closed
+    $('#modalKosong').on('hidden.bs.modal', function () {
+        kosongData = [];
+        $('#tableDN tbody').empty();
+        $('#no_pol_kosong, #driver_kosong, #vendor_name_kosong, #vendor_id_kosong, #barang_datetime').val('');
+    });
 
 });
+
+
+
+
+
 </script>
-
-
 
 
 

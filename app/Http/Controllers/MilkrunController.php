@@ -22,8 +22,18 @@ class MilkrunController extends Controller
 
         return response()->json($suppliers);
     }
+    public function getMilkrunData()
+    {
+        $entries = DB::table('milkrun')
+            ->select('id', 'dnsj_number', 'no_pol', 'status', 'vendor_name', 'vendor_id', 'date')
+            ->orderBy('date', 'desc')
+            ->get();
 
-    public function saveKosong(Request $request)
+        return response()->json($entries);
+    }
+
+
+    public function saveBarang(Request $request)
     {
     $request->validate([
         'data' => 'required|array',
@@ -32,7 +42,7 @@ class MilkrunController extends Controller
         'data.*.vendor_name' => 'required|string',
         'data.*.vendor_id' => 'required|string',
         'data.*.date' => 'required|date',
-        'data.*.no_sj' => 'required|string',
+        'data.*.dnsj_number' => 'required|string',
         'data.*.date_sj' => 'required|date',
         'data.*.status' => 'required|in:BAWA_BARANG,KOSONG',
     ]);
@@ -46,7 +56,7 @@ class MilkrunController extends Controller
             'vendor_name' => $item['vendor_name'],
             'vendor_id' => $item['vendor_id'],
             'date' => substr($item['date'], 0, 10),
-            'no_sj' => $item['no_sj'],
+            'dnsj_number' => $item['dnsj_number'],
             'date_sj' => substr($item['date_sj'], 0, 10),
             'status' => $item['status'],
             'created_at' => now(),
@@ -60,5 +70,38 @@ class MilkrunController extends Controller
 }
 
 
+public function saveKosong(Request $request)
+    {
+        $request->validate([
+            'data' => 'required|array',
+            'data.*.no_pol' => 'required|string',
+            'data.*.driver' => 'required|string',
+            'data.*.vendor_name' => 'required|string',
+            'data.*.vendor_id' => 'required|string',
+            'data.*.date' => 'required|date',
+            'data.*.status' => 'required|in:BAWA_BARANG,KOSONG',
+        ]);
+
+        $insertData = [];
+
+        foreach ($request->data as $item) {
+            $insertData[] = [
+                'no_pol'       => $item['no_pol'],
+                'driver'       => $item['driver'],
+                'vendor_name'  => $item['vendor_name'],
+                'vendor_id'    => $item['vendor_id'],
+                'date'         => substr($item['date'], 0, 10),
+                'dnsj_number'  => null, // Kosong doesn't use this
+                'date_sj'      => null, // Kosong doesn't use this
+                'status'       => $item['status'],
+                'created_at'   => now(),
+                'updated_at'   => now(),
+            ];
+        }
+
+        DB::table('milkrun')->insert($insertData);
+
+        return response()->json(['message' => 'Kosong data inserted successfully']);
+    }
 
 }

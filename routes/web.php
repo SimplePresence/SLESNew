@@ -46,7 +46,10 @@ Route::post('/checksj/ready/{id}/delivery', 'DataSJ@CheckSjReadyDelivery')->name
 //milkrun
 Route::get('/home/milkrun', 'MilkrunController@milkrunIndex')->name('home.milkrun');
 Route::get('/get-suppliers', 'MilkrunController@getSuppliers')->name('get.suppliers');
+Route::post('/barang/save', 'MilkrunController@saveBarang')->name('barang.save');
 Route::post('/kosong/save', 'MilkrunController@saveKosong')->name('kosong.save');
+Route::get('/milkrun/data', 'MilkrunController@getMilkrunData')->name('milkrun.data');
+
 
 
 // create Out

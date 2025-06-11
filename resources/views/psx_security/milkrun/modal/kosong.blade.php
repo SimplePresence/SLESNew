@@ -30,36 +30,33 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="barang_datetime">Date & Time</label>
-                        <div class="input-group date" id="barang_datetime_picker">
-                            <input type="date" class="form-control" id="barang_datetime_kosong" placeholder="Select date and time"/>
+                        <label for="kosong_datetime">Date & Time</label>
+                        <div class="input-group date" id="kosong_datetime_picker">
+                            <input type="date" class="form-control" id="barang_datetime" placeholder="Select date and time"/>
                         </div>
                     </div>
                 </form>
 
                 <div class="text-right mb-3">
-                    <button type="button" class="btn btn-success" id="addKosongRow">
+                    <button type="button" class="btn btn-success" id="addBarangRow">
                     <i class="fa fa-plus"></i> Add to Table
                     </button>
                 </div>
-
 
                 <hr>
 
                 <table class="table table-bordered mt-3" id="tableDN">
                     <thead class="text-center">
                         <tr>
+                            <th>No Pol</th>
+                            <th>Driver</th>
                             <th>Vendor Name</th>
                             <th>Vendor ID</th>
-                            <th>Barang Date</th>
-                            <th>No SJ</th>
-                            <th>Date SJ</th>
-                            <th>Action</th>
+                            <th>Date</th>
                         </tr>
                     </thead>
-                    <tbody id="kosongItem"></tbody>
+                    <tbody></tbody>
                 </table>
-
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
