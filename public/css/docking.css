@@ -1,0 +1,8 @@
+.docking-location {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    gap: 50px;
+}
